@@ -22,20 +22,20 @@ MeIR ir;
 MeRGBLed rgbLed(PORT_7, 2);
 MeBuzzer buzzer;
 
+double distanceCm = 0.0;
 int moveSpeed = 100;
 int lineFollowFlag = 0;
-double distanceCm = 0.0;
 uint8_t readSensors = 0;
+uint8_t randNumber;
 bool start = false;
 bool moveBot = false;
-uint8_t randNumber;
+bool makeNoise = false;
 
 unsigned long publishTimer = millis();
 bool wait = false;
 unsigned long waitTimer = millis();
 bool tryFollowLine = true;
 unsigned long tryFollowLineTimer = millis();
-bool makeNoise = false;
 
 
 void Forward() {
@@ -118,22 +118,22 @@ void irControl() {
     value = ir.value;
     switch (value >> 16 & 0xff) {
       case IR_BUTTON_LEFT:
-      TurnLeft();
-      break;
+        TurnLeft();
+        break;
       case IR_BUTTON_RIGHT:
-      TurnRight();
-      break;
+        TurnRight();
+        break;
       case IR_BUTTON_DOWN:
-      Backward();
-      break;
+        Backward();
+        break;
       case IR_BUTTON_UP:
-      Forward();
-      break;
+        Forward();
+        break;
       case IR_BUTTON_SETTING:
-      Stop();
-      break;
+        Stop();
+        break;
       case IR_BUTTON_A:
-      bottomPressed();
+        bottomPressed();
       break;
     }
   }
