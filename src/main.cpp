@@ -1,5 +1,4 @@
 // todo:
-// ir controll
 // autonomous drive
 
 #define VERSION "mBot Hackaton"
@@ -112,7 +111,7 @@ void bottomCheck() {
   }
 }
 
-bool irControl() {
+void irControl() {
   uint32_t value;
 
   if (ir.decode()) {
