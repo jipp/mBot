@@ -6,7 +6,7 @@
 #define DISTANCECMWARNING 30
 #define PUBLSIHINTERVAL 2000
 #define WAITINTERVAL 5000
-#define MOVESPEEDMAX 230
+#define MOVESPEED 100
 
 #include <Arduino.h>
 
@@ -32,7 +32,7 @@ uint8_t readSensors = 0;
 bool start = false;
 bool moveBot = false;
 bool makeNoise = false;
-bool distanceCheckOK = true;
+bool  obstacle = false;
 
 unsigned long publishTimer = millis();
 bool wait = false;
@@ -43,26 +43,26 @@ unsigned long tryFollowLineTimer = millis();
 
 void forward() {
   moveBot = true;
-  motorL.run(-moveSpeed);
-  motorR.run(moveSpeed);
+  motorL.run(-MOVESPEED);
+  motorR.run(MOVESPEED);
 }
 
 void backward() {
   moveBot = true;
-  motorL.run(moveSpeed);
-  motorR.run(-moveSpeed);
+  motorL.run(MOVESPEED);
+  motorR.run(-MOVESPEED);
 }
 
 void turnLeft() {
   moveBot = true;
-  motorL.run(-moveSpeed / 10);
-  motorR.run(moveSpeed);
+  motorL.run(-MOVESPEED / 10);
+  motorR.run(MOVESPEED);
 }
 
 void turnRight() {
   moveBot = true;
-  motorL.run(-moveSpeed);
-  motorR.run(moveSpeed / 10);
+  motorL.run(-MOVESPEED);
+  motorR.run(MOVESPEED / 10);
 }
 
 void stop() {
@@ -71,8 +71,16 @@ void stop() {
   motorR.run(0);
 }
 
+bool distanceCheck(double distanceCmLimit) {
+  if (distanceCm < distanceCmLimit) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
 void move() {
-  if (distanceCheckOK) {
+  if (distanceCheck(DISTANCECMCRITICAL)) {
     switch (moveDirection) {
       case FORWARD:
       forward();
@@ -174,39 +182,37 @@ void noiseCheck() {
   }
 }
 
-bool distanceCheck(double distanceCmLimit) {
-  if (distanceCm < distanceCmLimit) {
-    return false;
-  } else {
-    return true;
-  }
-}
-
 void autonomous() {
   uint8_t randNumber;
 
   randomSeed(analogRead(6));
   randNumber = random(2);
-  if (distanceCheckOK) {
+  if (distanceCheck(DISTANCECMCRITICAL) and !obstacle) {
     moveDirection = FORWARD;
   } else {
+    obstacle = true;
+  }
+
+  if (obstacle) {
+    if (!distanceCheck(DISTANCECMWARNING)) {
       moveDirection = BACKWARD;
-      move();
-      delay(400);
-    switch (randNumber) {
-      case 0:
-      moveDirection = LEFT;
-      turnLeft();
-      delay(200);
-      break;
-      case 1:
-      moveDirection = RIGHT;
-      turnRight();
-      delay(200);
-      break;
+    } else {
+      switch (randNumber) {
+        case 0:
+        moveDirection = LEFT;
+        turnLeft();
+        delay(200);
+        break;
+        case 1:
+        moveDirection = RIGHT;
+        turnRight();
+        delay(200);
+        break;
+      }
+      obstacle = false;
     }
   }
-  delay(100);
+  Serial << obstacle << endl;
 }
 
 void readData() {
@@ -244,12 +250,8 @@ void loop() {
   readData();
   sendData();
   noiseCheck();
-  distanceCheckOK = distanceCheck(DISTANCECMCRITICAL);
   move();
   if (start) {
-    if (moveSpeed > MOVESPEEDMAX) {
-      moveSpeed = 230;
-    }
     switch (readSensors) {
       case S1_IN_S2_IN:
       tryFollowLine = true;
@@ -276,7 +278,6 @@ void loop() {
         if (lineFollowFlag < 10) moveDirection = LEFT;
         if (lineFollowFlag > 10) moveDirection = RIGHT;
       } else {
-        //        moveDirection = STOP;
         autonomous();
       }
       break;
