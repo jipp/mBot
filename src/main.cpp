@@ -3,7 +3,8 @@
 
 #define VERSION "mBot Hackaton"
 #define DISTANCECMCRITICAL 20
-#define PUBLSIHINTERVAL 1000
+#define DISTANCECMWARNING 30
+#define PUBLSIHINTERVAL 2000
 #define WAITINTERVAL 5000
 #define MOVESPEEDMAX 230
 
@@ -11,6 +12,8 @@
 
 #include <Streaming.h>
 #include <MeMCore.h>
+
+enum direction { FORWARD, BACKWARD, LEFT, RIGHT, STOP } moveDirection = STOP;
 
 MeDCMotor motorL(M1);
 MeDCMotor motorR(M2);
@@ -26,10 +29,10 @@ double distanceCm = 0.0;
 int moveSpeed = 100;
 int lineFollowFlag = 0;
 uint8_t readSensors = 0;
-uint8_t randNumber;
 bool start = false;
 bool moveBot = false;
 bool makeNoise = false;
+bool distanceCheckOK = true;
 
 unsigned long publishTimer = millis();
 bool wait = false;
@@ -38,108 +41,116 @@ bool tryFollowLine = true;
 unsigned long tryFollowLineTimer = millis();
 
 
-void Forward() {
+void forward() {
   moveBot = true;
   motorL.run(-moveSpeed);
   motorR.run(moveSpeed);
 }
 
-void Backward() {
+void backward() {
   moveBot = true;
   motorL.run(moveSpeed);
   motorR.run(-moveSpeed);
 }
 
-void TurnLeft() {
+void turnLeft() {
   moveBot = true;
   motorL.run(-moveSpeed / 10);
   motorR.run(moveSpeed);
 }
 
-void TurnRight() {
+void turnRight() {
   moveBot = true;
   motorL.run(-moveSpeed);
   motorR.run(moveSpeed / 10);
 }
 
-void Stop() {
+void stop() {
   moveBot = false;
   motorL.run(0);
   motorR.run(0);
 }
 
-void Autonomous() {
-    randomSeed(analogRead(6));
-    randNumber = random(2);
-    if (distanceCm > 15 || distanceCm == 0) {
-      Forward();
-    } else if (distanceCm > 10) {
-      switch (randNumber)
-      {
-        case 0:
-          TurnLeft();
-          delay(200);
-          break;
-        case 1:
-          TurnRight();
-          delay(200);
-          break;
-      }
-    } else {
-      Backward();
-      delay(400);
+void move() {
+  if (distanceCheckOK) {
+    switch (moveDirection) {
+      case FORWARD:
+      forward();
+      break;
+      case BACKWARD:
+      backward();
+      break;
+      case LEFT:
+      turnLeft();
+      break;
+      case RIGHT:
+      turnRight();
+      break;
+      case STOP:
+      stop();
+      break;
     }
-    delay(100);
+  } else {
+    switch (moveDirection) {
+      case BACKWARD:
+      backward();
+      break;
+      default:
+      moveDirection = STOP;
+      stop();
+      break;
+    }
+  }
 }
 
-void bottomPressed() {
-    start = !start;
-    if (start) {
-      rgbLed.setColor(1, 0, 10, 0);
-      rgbLed.show();
-    } else {
-      rgbLed.setColor(1, 0, 0, 0);
-      rgbLed.show();
-      Stop();
-    }
-    delay(250);
+void toggleStart() {
+  start = !start;
+  if (start) {
+    rgbLed.setColor(1, 0, 10, 0);
+    rgbLed.show();
+  } else {
+    rgbLed.setColor(1, 0, 0, 0);
+    rgbLed.show();
+    moveDirection = STOP;
+  }
+  delay(250);
 }
 
 void bottomCheck() {
   if (analogRead(A7) == 0) {
-    bottomPressed();
+    toggleStart();
   }
 }
 
-void irControl() {
+void irCheck() {
   uint32_t value;
 
   if (ir.decode()) {
     value = ir.value;
     switch (value >> 16 & 0xff) {
       case IR_BUTTON_LEFT:
-        TurnLeft();
-        break;
+      moveDirection = LEFT;
+      break;
       case IR_BUTTON_RIGHT:
-        TurnRight();
-        break;
+      moveDirection = RIGHT;
+      break;
       case IR_BUTTON_DOWN:
-        Backward();
-        break;
+      moveDirection = BACKWARD;
+      break;
       case IR_BUTTON_UP:
-        Forward();
-        break;
+      moveDirection = FORWARD;
+      break;
       case IR_BUTTON_SETTING:
-        Stop();
-        break;
+      moveDirection = STOP;
+      break;
       case IR_BUTTON_A:
-        bottomPressed();
+      toggleStart();
       break;
     }
   }
 }
 
-void noise() {
+void noiseCheck() {
   if (!moveBot and start) {
     if (wait == false) {
       wait = true;
@@ -161,6 +172,41 @@ void noise() {
     rgbLed.setColor(2, 0, 0, 0);
     rgbLed.show();
   }
+}
+
+bool distanceCheck(double distanceCmLimit) {
+  if (distanceCm < distanceCmLimit) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
+void autonomous() {
+  uint8_t randNumber;
+
+  randomSeed(analogRead(6));
+  randNumber = random(2);
+  if (distanceCheckOK) {
+    moveDirection = FORWARD;
+  } else {
+      moveDirection = BACKWARD;
+      move();
+      delay(400);
+    switch (randNumber) {
+      case 0:
+      moveDirection = LEFT;
+      turnLeft();
+      delay(200);
+      break;
+      case 1:
+      moveDirection = RIGHT;
+      turnRight();
+      delay(200);
+      break;
+    }
+  }
+  delay(100);
 }
 
 void readData() {
@@ -194,50 +240,46 @@ void setup() {
 
 void loop() {
   bottomCheck();
-  irControl();
+  irCheck();
   readData();
   sendData();
-  noise();
+  noiseCheck();
+  distanceCheckOK = distanceCheck(DISTANCECMCRITICAL);
+  move();
   if (start) {
-    if (distanceCm < DISTANCECMCRITICAL and distanceCm > 0) {
-      Stop();
+    if (moveSpeed > MOVESPEEDMAX) {
+      moveSpeed = 230;
+    }
+    switch (readSensors) {
+      case S1_IN_S2_IN:
       tryFollowLine = true;
-    } else {
-      moveBot = true;
-      if (moveSpeed > MOVESPEEDMAX) {
-        moveSpeed = 230;
+      moveDirection = FORWARD;
+      lineFollowFlag = 10;
+      break;
+      case S1_IN_S2_OUT:
+      tryFollowLine = true;
+      moveDirection = FORWARD;
+      if (lineFollowFlag > 1) lineFollowFlag--;
+      break;
+      case S1_OUT_S2_IN:
+      tryFollowLine = true;
+      moveDirection = FORWARD;
+      if (lineFollowFlag < 20) lineFollowFlag++;
+      break;
+      case S1_OUT_S2_OUT:
+      if (tryFollowLine) {
+        tryFollowLine = !tryFollowLine;
+        tryFollowLineTimer = millis();
       }
-      switch (readSensors) {
-        case S1_IN_S2_IN:
-          tryFollowLine = true;
-          Forward();
-          lineFollowFlag = 10;
-          break;
-        case S1_IN_S2_OUT:
-          tryFollowLine = true;
-          Forward();
-          if (lineFollowFlag > 1) lineFollowFlag--;
-          break;
-        case S1_OUT_S2_IN:
-          tryFollowLine = true;
-          Forward();
-          if (lineFollowFlag < 20) lineFollowFlag++;
-          break;
-        case S1_OUT_S2_OUT:
-          if (tryFollowLine) {
-            tryFollowLine = !tryFollowLine;
-            tryFollowLineTimer = millis();
-          }
-          if (millis() - tryFollowLineTimer < 3000) {
-            if (lineFollowFlag == 10) Backward();
-            if (lineFollowFlag < 10) TurnLeft();
-            if (lineFollowFlag > 10) TurnRight();
-          } else {
-            Stop();
-//            Autonomous();
-          }
-          break;
+      if (millis() - tryFollowLineTimer < 3000) {
+        if (lineFollowFlag == 10) moveDirection = BACKWARD;
+        if (lineFollowFlag < 10) moveDirection = LEFT;
+        if (lineFollowFlag > 10) moveDirection = RIGHT;
+      } else {
+        //        moveDirection = STOP;
+        autonomous();
       }
+      break;
     }
   }
 }
