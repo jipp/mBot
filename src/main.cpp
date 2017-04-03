@@ -1,16 +1,14 @@
-// todo:
-// autonomous drive
-
-#define VERSION "mBot Hackaton"
 #define DISTANCECMCRITICAL 20
 #define DISTANCECMWARNING 30
-#define PUBLSIHINTERVAL 2000
+#define PUBLSIHINTERVAL 1000
+#define TRYFOLLOWLINEINTERVAL 3000
 #define WAITINTERVAL 5000
 #define MOVESPEED 100
 
 #include <Arduino.h>
 
 #include <Streaming.h>
+#include <ArduinoJson.h>
 #include <MeMCore.h>
 
 enum direction { FORWARD, BACKWARD, LEFT, RIGHT, STOP } moveDirection = STOP;
@@ -28,11 +26,11 @@ MeBuzzer buzzer;
 double distanceCm = 0.0;
 int moveSpeed = 100;
 int lineFollowFlag = 0;
-uint8_t readSensors = 0;
+byte readSensors = 0;
 bool start = false;
 bool moveBot = false;
 bool makeNoise = false;
-bool  obstacle = false;
+bool obstacle = false;
 
 unsigned long publishTimer = millis();
 bool wait = false;
@@ -40,6 +38,8 @@ unsigned long waitTimer = millis();
 bool tryFollowLine = true;
 unsigned long tryFollowLineTimer = millis();
 
+DynamicJsonBuffer jsonBuffer;
+JsonObject& root = jsonBuffer.createObject();
 
 void forward() {
   moveBot = true;
@@ -131,7 +131,7 @@ void bottomCheck() {
 }
 
 void irCheck() {
-  uint32_t value;
+  unsigned long value;
 
   if (ir.decode()) {
     value = ir.value;
@@ -183,7 +183,7 @@ void noiseCheck() {
 }
 
 void autonomous() {
-  uint8_t randNumber;
+  byte randNumber;
 
   randomSeed(analogRead(6));
   randNumber = random(2);
@@ -212,7 +212,6 @@ void autonomous() {
       obstacle = false;
     }
   }
-  Serial << obstacle << endl;
 }
 
 void readData() {
@@ -223,21 +222,20 @@ void readData() {
 void sendData() {
   if (millis() - publishTimer > PUBLSIHINTERVAL) {
     publishTimer = millis();
-    Serial << endl << "start: " << start << endl;
-    Serial << "moveBot: " << moveBot << endl;
-    Serial << "tryFollowLine: " << tryFollowLine << endl;
-    Serial << "makeNoise: " << makeNoise << endl;
-    Serial << "readSensors: " << readSensors << endl;
-    Serial << "temperature: " << temperature.temperature() << endl;
-    Serial << "lightSensor: " << lightSensor.read() << endl;
-    Serial << "distanceCm: " << distanceCm << endl;
+    root["moveBot"] = moveBot;
+    root["makeNoise"] = makeNoise;
+    root["distanceCm"] = distanceCm;
+    root["temperature"] = temperature.temperature();
+    root["lightSensor"] = lightSensor.read();
+    Serial << endl;
+    root.prettyPrintTo(Serial);
   }
 }
 
 
 void setup() {
   Serial.begin(115200);
-  Serial << endl << VERSION << endl << endl;
+  Serial << endl << endl;
   pinMode(A7, INPUT);
   ir.begin();
   rgbLed.setColor(0, 0, 0, 0);
@@ -273,7 +271,7 @@ void loop() {
         tryFollowLine = !tryFollowLine;
         tryFollowLineTimer = millis();
       }
-      if (millis() - tryFollowLineTimer < 3000) {
+      if (millis() - tryFollowLineTimer < TRYFOLLOWLINEINTERVAL) {
         if (lineFollowFlag == 10) moveDirection = BACKWARD;
         if (lineFollowFlag < 10) moveDirection = LEFT;
         if (lineFollowFlag > 10) moveDirection = RIGHT;
