@@ -11,24 +11,21 @@
 #include <ArduinoJson.h>
 #include <MeMCore.h>
 
-enum direction { FORWARD, BACKWARD, LEFT, RIGHT, STOP } moveDirection = STOP;
+enum direction { STOP, FORWARD, BACKWARD, LEFT, RIGHT } moveDirection = STOP;
 
 MeDCMotor motorL(M1);
 MeDCMotor motorR(M2);
 MeLineFollower lineFollower(PORT_2);
-MeTemperature temperature(PORT_1, SLOT2);
+MeTemperature temperature(PORT_4, SLOT2);
 MeUltrasonicSensor ultrasonicSensor(PORT_3);
 MeLightSensor lightSensor(PORT_6);
 MeIR ir;
 MeRGBLed rgbLed(PORT_7, 2);
 MeBuzzer buzzer;
 
-double distanceCm = 0.0;
 int moveSpeed = 100;
 int lineFollowFlag = 0;
-byte readSensors = 0;
 bool start = false;
-bool moveBot = false;
 bool makeNoise = false;
 bool obstacle = false;
 
@@ -42,45 +39,47 @@ DynamicJsonBuffer jsonBuffer;
 JsonObject& root = jsonBuffer.createObject();
 
 void forward() {
-  moveBot = true;
   motorL.run(-MOVESPEED);
   motorR.run(MOVESPEED);
 }
 
 void backward() {
-  moveBot = true;
   motorL.run(MOVESPEED);
   motorR.run(-MOVESPEED);
 }
 
 void turnLeft() {
-  moveBot = true;
   motorL.run(-MOVESPEED / 10);
   motorR.run(MOVESPEED);
 }
 
 void turnRight() {
-  moveBot = true;
   motorL.run(-MOVESPEED);
   motorR.run(MOVESPEED / 10);
 }
 
 void stop() {
-  moveBot = false;
+  moveDirection = STOP;
   motorL.run(0);
   motorR.run(0);
 }
 
-bool distanceCheck(double distanceCmLimit) {
-  if (distanceCm < distanceCmLimit) {
-    return false;
-  } else {
+bool distanceWarning(double distanceCmLimit) {
+  if (ultrasonicSensor.distanceCm() < distanceCmLimit) {
     return true;
+  } else {
+    return false;
   }
 }
 
 void move() {
-  if (distanceCheck(DISTANCECMCRITICAL)) {
+  if (distanceWarning(DISTANCECMCRITICAL)) {
+    if (moveDirection == BACKWARD) {
+      backward();
+    } else {
+      stop();
+    }
+  } else {
     switch (moveDirection) {
       case FORWARD:
       forward();
@@ -95,16 +94,6 @@ void move() {
       turnRight();
       break;
       case STOP:
-      stop();
-      break;
-    }
-  } else {
-    switch (moveDirection) {
-      case BACKWARD:
-      backward();
-      break;
-      default:
-      moveDirection = STOP;
       stop();
       break;
     }
@@ -158,27 +147,39 @@ void irCheck() {
   }
 }
 
+void silent() {
+  buzzer.noTone();
+  rgbLed.setColor(2, 0, 0, 0);
+  rgbLed.show();
+}
+
+void warning() {
+  rgbLed.setColor(2, 0, 0, 10);
+  rgbLed.show();
+}
+
+void alarm() {
+  //buzzer.tone(262, 100);
+  rgbLed.setColor(2, 10, 0, 0);
+  rgbLed.show();
+}
+
 void noiseCheck() {
-  if (!moveBot and start) {
+  if (start and distanceWarning(DISTANCECMCRITICAL)) {
     if (wait == false) {
       wait = true;
       waitTimer = millis();
     }
     if (wait and millis() - waitTimer > WAITINTERVAL) {
       makeNoise = true;
-      //buzzer.tone(262, 100);
-      rgbLed.setColor(2, 10, 0, 0);
-      rgbLed.show();
+      alarm();
     } else {
-      rgbLed.setColor(2, 0, 0, 10);
-      rgbLed.show();
+      warning();
     }
   } else {
     wait = false;
     makeNoise = false;
-    buzzer.noTone();
-    rgbLed.setColor(2, 0, 0, 0);
-    rgbLed.show();
+    silent();
   }
 }
 
@@ -187,26 +188,25 @@ void autonomous() {
 
   randomSeed(analogRead(6));
   randNumber = random(2);
-  if (distanceCheck(DISTANCECMCRITICAL) and !obstacle) {
+  if (!distanceWarning(DISTANCECMCRITICAL) and !obstacle) {
     moveDirection = FORWARD;
   } else {
     obstacle = true;
   }
-
   if (obstacle) {
-    if (!distanceCheck(DISTANCECMWARNING)) {
+    if (distanceWarning(DISTANCECMWARNING)) {
       moveDirection = BACKWARD;
     } else {
       switch (randNumber) {
         case 0:
         moveDirection = LEFT;
         turnLeft();
-        delay(200);
+        delay(400);
         break;
         case 1:
         moveDirection = RIGHT;
         turnRight();
-        delay(200);
+        delay(400);
         break;
       }
       obstacle = false;
@@ -214,21 +214,18 @@ void autonomous() {
   }
 }
 
-void readData() {
-  readSensors = lineFollower.readSensors();
-  distanceCm = ultrasonicSensor.distanceCm();
-}
-
 void sendData() {
   if (millis() - publishTimer > PUBLSIHINTERVAL) {
     publishTimer = millis();
-    root["moveBot"] = moveBot;
+    root["start"] = start;
+    root["moveDirection"] = moveDirection;
+    root["wait"] = wait;
     root["makeNoise"] = makeNoise;
-    root["distanceCm"] = distanceCm;
-    root["temperature"] = temperature.temperature();
+    root["distanceCm"] = ultrasonicSensor.distanceCm();
     root["lightSensor"] = lightSensor.read();
-    Serial << endl;
+    root["temperature"] = temperature.temperature();
     root.prettyPrintTo(Serial);
+    Serial << endl;
   }
 }
 
@@ -245,12 +242,11 @@ void setup() {
 void loop() {
   bottomCheck();
   irCheck();
-  readData();
-  sendData();
   noiseCheck();
+  sendData();
   move();
   if (start) {
-    switch (readSensors) {
+    switch (lineFollower.readSensors()) {
       case S1_IN_S2_IN:
       tryFollowLine = true;
       moveDirection = FORWARD;
