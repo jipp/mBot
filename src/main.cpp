@@ -11,7 +11,7 @@
 #include <ArduinoJson.h>
 #include <MeMCore.h>
 
-enum direction { STOP, FORWARD, BACKWARD, LEFT, RIGHT } moveDirection = STOP;
+enum direction { STOP, FORWARD, BACKWARD, LEFT, RIGHT } move = STOP;
 
 MeDCMotor motorL(M1);
 MeDCMotor motorR(M2);
@@ -26,8 +26,8 @@ MePIRMotionSensor pirMotionSensor(PORT_1);
 
 int moveSpeed = 100;
 int lineFollowFlag = 0;
-bool start = false;
-bool makeNoise = false;
+bool watch = false;
+bool blocked = false;
 bool obstacle = false;
 
 unsigned long publishTimer = millis();
@@ -60,7 +60,6 @@ void turnRight() {
 }
 
 void stop() {
-  moveDirection = STOP;
   motorL.run(0);
   motorR.run(0);
 }
@@ -73,15 +72,15 @@ bool distanceWarning(double distanceCmLimit) {
   }
 }
 
-void move() {
+void drive() {
   if (distanceWarning(DISTANCECMCRITICAL)) {
-    if (moveDirection == BACKWARD) {
+    if (move == BACKWARD) {
       backward();
     } else {
       stop();
     }
   } else {
-    switch (moveDirection) {
+    switch (move) {
       case FORWARD:
       forward();
       break;
@@ -101,22 +100,22 @@ void move() {
   }
 }
 
-void toggleStart() {
-  start = !start;
-  if (start) {
+void toggleWatch() {
+  watch = !watch;
+  if (watch) {
     rgbLed.setColor(1, 0, 10, 0);
     rgbLed.show();
   } else {
     rgbLed.setColor(1, 0, 0, 0);
     rgbLed.show();
-    moveDirection = STOP;
+    move = STOP;
   }
   delay(250);
 }
 
 void bottomCheck() {
   if (analogRead(A7) == 0) {
-    toggleStart();
+    toggleWatch();
   }
 }
 
@@ -127,22 +126,22 @@ void irCheck() {
     value = ir.value;
     switch (value >> 16 & 0xff) {
       case IR_BUTTON_LEFT:
-      moveDirection = LEFT;
+      move = LEFT;
       break;
       case IR_BUTTON_RIGHT:
-      moveDirection = RIGHT;
+      move = RIGHT;
       break;
       case IR_BUTTON_DOWN:
-      moveDirection = BACKWARD;
+      move = BACKWARD;
       break;
       case IR_BUTTON_UP:
-      moveDirection = FORWARD;
+      move = FORWARD;
       break;
       case IR_BUTTON_SETTING:
-      moveDirection = STOP;
+      move = STOP;
       break;
       case IR_BUTTON_A:
-      toggleStart();
+      toggleWatch();
       break;
     }
   }
@@ -166,20 +165,20 @@ void alarm() {
 }
 
 void noiseCheck() {
-  if (start and distanceWarning(DISTANCECMCRITICAL)) {
+  if (watch and distanceWarning(DISTANCECMCRITICAL)) {
     if (wait == false) {
       wait = true;
       waitTimer = millis();
     }
     if (wait and millis() - waitTimer > WAITINTERVAL) {
-      makeNoise = true;
+      blocked = true;
       alarm();
     } else {
       warning();
     }
   } else {
     wait = false;
-    makeNoise = false;
+    blocked = false;
     silent();
   }
 }
@@ -190,22 +189,22 @@ void autonomous() {
   randomSeed(analogRead(6));
   randNumber = random(2);
   if (!distanceWarning(DISTANCECMCRITICAL) and !obstacle) {
-    moveDirection = FORWARD;
+    move = FORWARD;
   } else {
     obstacle = true;
   }
   if (obstacle) {
     if (distanceWarning(DISTANCECMWARNING)) {
-      moveDirection = BACKWARD;
+      move = BACKWARD;
     } else {
       switch (randNumber) {
         case 0:
-        moveDirection = LEFT;
+        move = LEFT;
         turnLeft();
         delay(400);
         break;
         case 1:
-        moveDirection = RIGHT;
+        move = RIGHT;
         turnRight();
         delay(400);
         break;
@@ -218,10 +217,10 @@ void autonomous() {
 void sendData() {
   if (millis() - publishTimer > PUBLSIHINTERVAL) {
     publishTimer = millis();
-    root["start"] = start;
-    root["moveDirection"] = moveDirection;
+    root["watch"] = watch;
+    root["move"] = move;
     root["wait"] = wait;
-    root["makeNoise"] = makeNoise;
+    root["blocked"] = blocked;
     root["distanceCm"] = ultrasonicSensor.distanceCm();
     root["lightSensor"] = lightSensor.read();
     root["temperature"] = temperature.temperature();
@@ -247,22 +246,22 @@ void loop() {
   irCheck();
   noiseCheck();
   sendData();
-  move();
-  if (start) {
+  drive();
+  if (watch) {
     switch (lineFollower.readSensors()) {
       case S1_IN_S2_IN:
       tryFollowLine = true;
-      moveDirection = FORWARD;
+      move = FORWARD;
       lineFollowFlag = 10;
       break;
       case S1_IN_S2_OUT:
       tryFollowLine = true;
-      moveDirection = FORWARD;
+      move = FORWARD;
       if (lineFollowFlag > 1) lineFollowFlag--;
       break;
       case S1_OUT_S2_IN:
       tryFollowLine = true;
-      moveDirection = FORWARD;
+      move = FORWARD;
       if (lineFollowFlag < 20) lineFollowFlag++;
       break;
       case S1_OUT_S2_OUT:
@@ -271,9 +270,9 @@ void loop() {
         tryFollowLineTimer = millis();
       }
       if (millis() - tryFollowLineTimer < TRYFOLLOWLINEINTERVAL) {
-        if (lineFollowFlag == 10) moveDirection = BACKWARD;
-        if (lineFollowFlag < 10) moveDirection = LEFT;
-        if (lineFollowFlag > 10) moveDirection = RIGHT;
+        if (lineFollowFlag == 10) move = BACKWARD;
+        if (lineFollowFlag < 10) move = LEFT;
+        if (lineFollowFlag > 10) move = RIGHT;
       } else {
         autonomous();
       }
