@@ -6,4 +6,5 @@ Firmware for the mBot from Makeblock written with PlatformIO.
 * Arduino IDE: copy content of main.cpp into Arduino IDE
 
 ## Needed Libraries
-* [ 560 ] Streaming C++-style Output with Operator <<
+* [ 560 ] Streaming
+* [  64 ] ArduinoJson
