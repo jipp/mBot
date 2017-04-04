@@ -22,6 +22,7 @@ MeLightSensor lightSensor(PORT_6);
 MeIR ir;
 MeRGBLed rgbLed(PORT_7, 2);
 MeBuzzer buzzer;
+MePIRMotionSensor pirMotionSensor(PORT_1);
 
 int moveSpeed = 100;
 int lineFollowFlag = 0;
@@ -224,6 +225,7 @@ void sendData() {
     root["distanceCm"] = ultrasonicSensor.distanceCm();
     root["lightSensor"] = lightSensor.read();
     root["temperature"] = temperature.temperature();
+    root["isHumanDetected"] = pirMotionSensor.isHumanDetected();
     root.prettyPrintTo(Serial);
     Serial << endl;
   }
@@ -235,6 +237,7 @@ void setup() {
   Serial << endl << endl;
   pinMode(A7, INPUT);
   ir.begin();
+  pirMotionSensor.SetPirMotionMode(1);
   rgbLed.setColor(0, 0, 0, 0);
   rgbLed.show();
 }
