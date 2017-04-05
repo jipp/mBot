@@ -226,7 +226,7 @@ void sendData() {
     root["temperature"] = temperature.temperature();
     root["isHumanDetected"] = pirMotionSensor.isHumanDetected();
     root.prettyPrintTo(Serial);
-    Serial << endl;
+    Serial << "<eom>" << endl;
   }
 }
 
