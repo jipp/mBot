@@ -1,9 +1,11 @@
 #define DISTANCECMCRITICAL 20
 #define DISTANCECMWARNING 30
-#define PUBLSIHINTERVAL 1000
+#define PUBLSIHINTERVAL 2000
 #define TRYFOLLOWLINEINTERVAL 3000
 #define WAITINTERVAL 5000
 #define MOVESPEED 100
+
+#define JSON
 
 #include <Arduino.h>
 
@@ -28,7 +30,7 @@ int moveSpeed = 100;
 int lineFollowFlag = 0;
 bool watch = false;
 bool blocked = false;
-bool obstacle = false;
+bool obstacleDetected = false;
 
 unsigned long publishTimer = millis();
 bool wait = false;
@@ -188,12 +190,12 @@ void autonomous() {
 
   randomSeed(analogRead(6));
   randNumber = random(2);
-  if (!distanceWarning(DISTANCECMCRITICAL) and !obstacle) {
+  if (!distanceWarning(DISTANCECMCRITICAL) and !obstacleDetected) {
     move = FORWARD;
   } else {
-    obstacle = true;
+    obstacleDetected = true;
   }
-  if (obstacle) {
+  if (obstacleDetected) {
     if (distanceWarning(DISTANCECMWARNING)) {
       move = BACKWARD;
     } else {
@@ -209,7 +211,7 @@ void autonomous() {
         delay(400);
         break;
       }
-      obstacle = false;
+      obstacleDetected = false;
     }
   }
 }
@@ -217,6 +219,7 @@ void autonomous() {
 void sendData() {
   if (millis() - publishTimer > PUBLSIHINTERVAL) {
     publishTimer = millis();
+    #ifdef JSON
     root["watch"] = watch;
     root["move"] = move;
     root["wait"] = wait;
@@ -227,12 +230,24 @@ void sendData() {
     root["isHumanDetected"] = pirMotionSensor.isHumanDetected();
     root.prettyPrintTo(Serial);
     Serial << "<eom>" << endl;
+    #else
+    Serial << "ID:11:11:11:11:11:13;";
+    Serial << "TEMP:" << temperature.temperature() << ";" << endl;
+    Serial.flush();
+    Serial << "ID:11:11:11:11:11:13;";
+    Serial << "DIST:" << ultrasonicSensor.distanceCm() << ";" << endl;
+    Serial.flush();
+    Serial << "ID:11:11:11:11:11:13;";
+    Serial << "LIGH:" << lightSensor.read() << ";" << endl;
+    Serial.flush();
+    #endif
   }
 }
 
 
 void setup() {
   Serial.begin(115200);
+  while (!Serial);
   Serial << endl << endl;
   pinMode(A7, INPUT);
   ir.begin();
