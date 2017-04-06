@@ -4,8 +4,6 @@
 #define TRYFOLLOWLINEINTERVAL 3000
 #define WAITINTERVAL 5000
 #define MOVESPEED 100
-#define ID "11:11:11:11:11:13"
-#define JSON
 
 #include <Arduino.h>
 
@@ -161,7 +159,7 @@ void warning() {
 }
 
 void alarm() {
-  //buzzer.tone(262, 100);
+  buzzer.tone(262, 100);
   rgbLed.setColor(2, 10, 0, 0);
   rgbLed.show();
 }
@@ -203,12 +201,12 @@ void autonomous() {
         case 0:
         move = LEFT;
         turnLeft();
-        delay(400);
+        delay(500);
         break;
         case 1:
         move = RIGHT;
         turnRight();
-        delay(400);
+        delay(500);
         break;
       }
       obstacleDetected = false;
@@ -219,11 +217,11 @@ void autonomous() {
 void sendData() {
   if (millis() - publishTimer > PUBLSIHINTERVAL) {
     publishTimer = millis();
-    #ifdef JSON
     root["watch"] = watch;
     root["move"] = move;
     root["wait"] = wait;
     root["blocked"] = blocked;
+    root["obstacleDetected"] = obstacleDetected;
     root["distanceCm"] = ultrasonicSensor.distanceCm();
     root["lightSensor"] = lightSensor.read();
     root["temperature"] = temperature.temperature();
@@ -231,14 +229,6 @@ void sendData() {
     //root.prettyPrintTo(Serial);
     root.printTo(Serial);
     Serial << "<eom>" << endl;
-    #else
-    Serial << ID << ";TEMP:" << temperature.temperature() << ";" << endl;
-    Serial.flush();
-    Serial << ID << ";DIST:" << ultrasonicSensor.distanceCm() << ";" << endl;
-    Serial.flush();
-    Serial << ID << ";LIGH:" << lightSensor.read() << ";" << endl;
-    Serial.flush();
-    #endif
   }
 }
 
