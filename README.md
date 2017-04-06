@@ -15,29 +15,24 @@ Firmware for the mBot from Makeblock written with PlatformIO.
 
 ## Sensor data
 * watch:
-** true: autonomous mode is on;
-** false: manual mode is on (use IR to control, beware that all mBot use the same IR and influence each other)
-
+  * true: autonomous mode is on
+  * false: manual mode is on (use IR to control, beware that all mBot use the same IR and influence each other)
 * move:
-** true: is moving
-** false: is not moving
-
+  * true: is moving
+  * false: is not moving
 * wait:
-** true: obstacle detected and wait 5 sec before being blocked, blue light switches to on
-** false: no obstacle detected
-
+  * true: obstacle detected and wait 5 sec before being blocked, blue light switches to on
+  * false: no obstacle detected
 * blocked (for autonomous mode):
-** true: obstacle did not go away -> be noisy, red light is on
-** false: no obstacle detected
-
+  * true: obstacle did not go away -> be noisy, red light is on
+  * false: no obstacle detected
 * obstacleDetected (for manual mode):
-** true: be in front of an obstacle, only move possible is backwards
-** false: no obstacle
-
+  * true: be in front of an obstacle, only move possible is backwards
+  * false: no obstacle
 * distanceCm: distance measured with ultrasonic sensor
 * lightSensor: build in sensor (LDR)
-* temperature: measured with DS18B20 (water prove)
-* isHumanDetected: PIR Sensor (not working and not complete integrated)
+* temperature: measured with DS18B20 (water proved)
+* isHumanDetected: PIR Sensor (not working and not completely integrated)
 
 ## Needed Libraries
 * [  64 ] ArduinoJson
