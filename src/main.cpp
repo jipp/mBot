@@ -4,7 +4,7 @@
 #define TRYFOLLOWLINEINTERVAL 3000
 #define WAITINTERVAL 5000
 #define MOVESPEED 100
-
+#define ID "11:11:11:11:11:13"
 #define JSON
 
 #include <Arduino.h>
@@ -228,17 +228,15 @@ void sendData() {
     root["lightSensor"] = lightSensor.read();
     root["temperature"] = temperature.temperature();
     root["isHumanDetected"] = pirMotionSensor.isHumanDetected();
-    root.prettyPrintTo(Serial);
+    //root.prettyPrintTo(Serial);
+    root.printTo(Serial);
     Serial << "<eom>" << endl;
     #else
-    Serial << "ID:11:11:11:11:11:13;";
-    Serial << "TEMP:" << temperature.temperature() << ";" << endl;
+    Serial << ID << ";TEMP:" << temperature.temperature() << ";" << endl;
     Serial.flush();
-    Serial << "ID:11:11:11:11:11:13;";
-    Serial << "DIST:" << ultrasonicSensor.distanceCm() << ";" << endl;
+    Serial << ID << ";DIST:" << ultrasonicSensor.distanceCm() << ";" << endl;
     Serial.flush();
-    Serial << "ID:11:11:11:11:11:13;";
-    Serial << "LIGH:" << lightSensor.read() << ";" << endl;
+    Serial << ID << ";LIGH:" << lightSensor.read() << ";" << endl;
     Serial.flush();
     #endif
   }
