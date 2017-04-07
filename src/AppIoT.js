@@ -1,4 +1,4 @@
-// call script using: 'node <name> <serial device>'
+// call script using: 'node AppIoT.js <serial device>'
 // to check that the device is receiving data you can try: 'cat /dev/rfcomm0'
 
 var httpServiceUri = "https://eappiotsens.servicebus.windows.net";
