@@ -24,7 +24,6 @@ MeRGBLed rgbLed(PORT_7, 2);
 MeBuzzer buzzer;
 MePIRMotionSensor pirMotionSensor(PORT_1);
 
-int moveSpeed = 100;
 int lineFollowFlag = 0;
 bool watch = false;
 bool blocked = false;
