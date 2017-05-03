@@ -13,7 +13,9 @@ env:
 install:
     - pip install -U platformio
     - platformio lib -g install 64 560
+    - wget https://github.com/Makeblock-official/Makeblock-Libraries/archive/master.zip -O /tmp/makeblock.zip
+    - unzip /tmp/makeblock.zip -d /tmp/
 
 script:
 #    - platformio run
-    - platformio ci --project-conf=platformio.ini
+    - platformio ci --lib="/tmp/makeblock-master --project-conf=platformio.ini
