@@ -8,11 +8,12 @@ cache:
         - "~/.platformio"
 
 env:
-     - PLATFORMIO_CI_SRC=mBot/src/main.cpp
+     - PLATFORMIO_CI_SRC=src/main.cpp
 
 install:
     - pip install -U platformio
     - platformio lib -g install 64 560
 
 script:
-    - platformio run
+#    - platformio run
+    - platformio ci --project-conf=platformio.ini
