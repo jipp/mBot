@@ -18,4 +18,4 @@ install:
 
 script:
 #    - platformio run
-    - platformio ci --lib="/tmp/Makeblock-Libraries-master --project-conf=platformio.ini
+    - platformio ci --lib="/tmp/Makeblock-Libraries-master/makeblock --project-conf=platformio.ini
