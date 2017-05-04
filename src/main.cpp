@@ -10,6 +10,7 @@
 #include <Streaming.h>
 #include <ArduinoJson.h>
 #include <MeMCore.h>
+#include <Wire.h>
 
 enum direction { STOP, FORWARD, BACKWARD, LEFT, RIGHT } move = STOP;
 
