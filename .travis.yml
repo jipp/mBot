@@ -20,3 +20,7 @@ script:
 #    - platformio run
 #    - platformio ci --lib="/tmp/Makeblock-Libraries-master/makeblock" --project-conf=platformio.ini
     - platformio ci --lib="lib/makeblock" --project-conf=platformio.ini
+    - platformio ci --lib="/tmp/Makeblock-Libraries-master/makeblock" --project-conf=platformio.ini
+
+
+#    platformio ci --lib="C:\Makeblock-Libraries-master\makeblock" --project-conf=platformio.ini src/main.cpp
