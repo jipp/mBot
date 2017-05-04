@@ -15,15 +15,7 @@ install:
     - platformio lib -g install 64 560
     - wget https://github.com/Makeblock-official/Makeblock-Libraries/archive/master.zip -O /tmp/Makeblock-Libraries.zip
     - unzip /tmp/Makeblock-Libraries.zip -d /tmp
-    - mv /tmp/Makeblock-Libraries-master/makeblock lib
-    - ls lib
 
 script:
 #    - platformio run
-#    - platformio ci --lib="/tmp/Makeblock-Libraries-master/makeblock" --project-conf=platformio.ini
-    - platformio ci --lib="lib/makeblock" --project-conf=platformio.ini
-    - platformio ci --project-conf=platformio.ini
     - platformio ci --lib="/tmp/Makeblock-Libraries-master/makeblock" --project-conf=platformio.ini
-
-
-#    platformio ci --lib="C:\Makeblock-Libraries-master\makeblock" --project-conf=platformio.ini src/main.cpp
