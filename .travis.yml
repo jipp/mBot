@@ -16,6 +16,7 @@ install:
     - wget https://github.com/Makeblock-official/Makeblock-Libraries/archive/master.zip -O /tmp/Makeblock-Libraries.zip
     - unzip /tmp/Makeblock-Libraries.zip -d /tmp
     - mv /tmp/Makeblock-Libraries-master/makeblock lib
+    - ls lib
 
 script:
 #    - platformio run
